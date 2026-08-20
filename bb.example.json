@@ -1,10 +1,8 @@
 {
   "preflight": [
-    "mdguard check",
-    "graft scan --json",
-    "policy-runner run",
-    "dep-health-scanner scan --json",
-    "config-drift diff --fail-on-drift"
+    "mdguard . --json",
+    "graft . --check",
+    "config-drift diff --configs-root ./configs --environments dev,staging,prod --fail-on-drift"
   ],
   "timeout_seconds": 120,
   "mockroute": {

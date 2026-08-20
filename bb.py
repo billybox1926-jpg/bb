@@ -45,15 +45,13 @@ TOOL_PACKAGES = {
     "mdguard": "mdguard",
     "graft": "graft-inventory",  # 'graft' AND 'graft-cli' both taken
     "policy-runner": "policy-runner",
-    # NOTE: the console script is 'depscan', not 'dep-health-scanner'.
-    "depscan": "dep-health-scanner",
 }
 
 BILLYBOX_TOOLS = tuple(TOOL_PACKAGES)
 
 # Tools that are not published to PyPI yet. bb install reports these as
 # 'unavailable' rather than attempting an install that would 404 — or worse,
-# silently fetch a squatted package.
+# silently fetch a squatted package under a bare name.
 UNPUBLISHED_TOOLS = frozenset(TOOL_PACKAGES)
 
 # Default quality gate.
@@ -65,12 +63,14 @@ UNPUBLISHED_TOOLS = frozenset(TOOL_PACKAGES)
 #     plus --check for read-only validation.
 #   - policy-runner has no 'run' subcommand; --task and --policy are required,
 #     so it cannot have a zero-config default and is omitted here.
-#   - dep-health-scanner installs as 'depscan' and has no --json (--exit-code).
 #   - config-drift requires --configs-root and --environments.
+#
+# dep-health-scanner is deliberately NOT included: it requires typer, rich and
+# httpx, which breaks the suite's zero-dependency invariant. Add it to your own
+# bb.json as 'depscan scan --exit-code' if you want it.
 DEFAULT_PREFLIGHT = [
     "mdguard . --json",
     "graft . --check",
-    "depscan scan --exit-code",
     "config-drift diff --configs-root ./configs --environments dev,staging,prod"
     " --fail-on-drift",
 ]

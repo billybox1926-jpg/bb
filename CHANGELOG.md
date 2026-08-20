@@ -14,15 +14,17 @@ All notable changes to this project will be documented in this file.
   tool's real CLI rather than its README prose:
   - `mdguard check` → `mdguard . --json` (no `check` subcommand; takes paths)
   - `graft scan --json` → `graft . --check` (no `scan` subcommand, no `--json`)
-  - `dep-health-scanner scan --json` → `depscan scan --exit-code` (the console
-    script is `depscan`; there is no `--json`)
   - `config-drift diff --fail-on-drift` → now passes the required
     `--configs-root` and `--environments`
   - `policy-runner run` → removed; `--task` and `--policy` are required, so it
     cannot have a zero-config default
+  - `dep-health-scanner scan --json` → removed from the suite entirely; it
+    requires `typer`, `rich` and `httpx`, breaking the zero-dependency
+    invariant. Its console script is also `depscan`, not
+    `dep-health-scanner`, so the original default could never have run.
 - PyPI distribution names verified against the live index: `graft` publishes as
   `graft-inventory` (both `graft` and `graft-cli` are taken by other projects);
-  `mdguard`, `policy-runner` and `dep-health-scanner` keep their bare names.
+  `mdguard` and `policy-runner` keep their bare names.
 
 ### Added
 - `bb doctor` shows `pip install <package>` for missing tools; the JSON output

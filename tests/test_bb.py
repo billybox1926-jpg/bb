@@ -802,7 +802,7 @@ class TestCli(unittest.TestCase):
     def test_billybox_tools_list(self):
         self.assertIn("ctxpack", bb.BILLYBOX_TOOLS)
         self.assertIn("fieldboard", bb.BILLYBOX_TOOLS)
-        self.assertEqual(len(bb.BILLYBOX_TOOLS), 10)
+        self.assertEqual(len(bb.BILLYBOX_TOOLS), 9)
 
 
 class TestToolRegistry(unittest.TestCase):
@@ -838,11 +838,19 @@ class TestToolRegistry(unittest.TestCase):
         self.assertEqual(bb.TOOL_PACKAGES["bb"], "bb-toolbelt")
         self.assertEqual(bb.TOOL_PACKAGES["graft"], "graft-inventory")
 
-    def test_depscan_key_matches_real_console_script(self):
-        """dep-health-scanner installs as 'depscan'; the key must be the script."""
-        self.assertIn("depscan", bb.TOOL_PACKAGES)
-        self.assertEqual(bb.TOOL_PACKAGES["depscan"], "dep-health-scanner")
+    def test_dep_health_scanner_is_excluded(self):
+        """Excluded from the suite: requires typer/rich/httpx.
+
+        It breaks the zero-dependency invariant, so neither its distribution
+        name nor its console script ('depscan') belongs in the registry.
+        Users can still add it to their own bb.json.
+        """
+        self.assertNotIn("depscan", bb.TOOL_PACKAGES)
         self.assertNotIn("dep-health-scanner", bb.TOOL_PACKAGES)
+        self.assertNotIn("dep-health-scanner", bb.TOOL_PACKAGES.values())
+        joined = " | ".join(bb.DEFAULT_PREFLIGHT)
+        self.assertNotIn("depscan", joined)
+        self.assertNotIn("dep-health-scanner", joined)
 
     def test_no_default_step_uses_an_unverified_subcommand(self):
         """Guards the specific invalid invocations that shipped in v0.1.0."""

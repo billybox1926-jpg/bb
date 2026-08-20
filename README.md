@@ -76,7 +76,6 @@ bb init      [--force]
   "preflight": [
     "mdguard . --json",
     "graft . --check",
-    "depscan scan --exit-code",
     "config-drift diff --configs-root ./configs --environments dev,staging,prod --fail-on-drift"
   ],
   "timeout_seconds": 120,
@@ -108,15 +107,15 @@ distribution name differ where the bare name was already taken:
 | `mdguard` | `mdguard` |
 | `graft` | `graft-inventory` |
 | `policy-runner` | `policy-runner` |
-| `depscan` | `dep-health-scanner` |
 
 > [!NOTE]
-> `dep-health-scanner` installs a console script named **`depscan`**, so that
-> is the name preflight invokes and the name `bb doctor` reports.
->
 > `policy-runner` requires `--task` and `--policy`, so it has no zero-config
 > default and is not in `DEFAULT_PREFLIGHT`. Add it to your own `bb.json`
 > with explicit paths.
+>
+> `dep-health-scanner` is **not** part of the suite: it requires `typer`,
+> `rich` and `httpx`, which breaks the zero-dependency invariant. You can
+> still add `depscan scan --exit-code` to your own `bb.json`.
 >
 > None of these are published to PyPI yet — `bb doctor` will report every tool
 > as MISSING on a clean machine.
@@ -143,11 +142,9 @@ BB PREFLIGHT — /home/user/project
  ──────────────────────────────────────────────────────────────
  mdguard                  PASS       210ms
  graft                    PASS       380ms
- policy-runner            FAIL       1500ms       denied: rm -rf /
- dep-health-scanner       SKIP       ─            not found on PATH
- config-drift             PASS       900ms
+ config-drift             FAIL       900ms        drift detected in prod
 
- Summary: 3 passed, 1 failed, 1 skipped
+ Summary: 2 passed, 1 failed, 0 skipped
 ```
 
 JSON (`--json`):
