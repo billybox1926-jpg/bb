@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bb-toolbelt"
+version = "0.1.0"
+description = "BillyBox Toolbelt - one CLI for the BillyBox tools"
+readme = "README.md"
+license = {text = "MIT"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Quality Assurance",
+]
+requires-python = ">=3.9"
+dependencies = []
+
+[project.scripts]
+bb = "bb:main"
+
+[project.urls]
+Homepage = "https://github.com/billybox1926-jpg/bb"
+Repository = "https://github.com/billybox1926-jpg/bb"
+Changelog = "https://github.com/billybox1926-jpg/bb/blob/main/CHANGELOG.md"
+
+[tool.setuptools]
+py-modules = ["bb"]
+
+[tool.ruff]
+target-version = "py39"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=bb --cov-report=term-missing --cov-fail-under=85"
+
+[tool.coverage.run]
+source = ["bb"]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 85
