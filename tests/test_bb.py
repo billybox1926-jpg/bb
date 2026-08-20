@@ -231,8 +231,14 @@ class TestDefaultConfig(unittest.TestCase):
         for key in ("preflight", "timeout_seconds", "mockroute", "commitlog"):
             self.assertIn(key, cfg)
 
-    def test_preflight_has_five_steps(self):
-        self.assertEqual(len(bb.get_default_config()["preflight"]), 5)
+    def test_preflight_steps_are_all_in_registry(self):
+        import shlex as _shlex
+
+        steps = bb.get_default_config()["preflight"]
+        self.assertGreater(len(steps), 0)
+        for step in steps:
+            exe = Path(_shlex.split(step)[0]).name
+            self.assertIn(exe, bb.TOOL_PACKAGES)
 
     def test_timeout_is_120(self):
         self.assertEqual(bb.get_default_config()["timeout_seconds"], 120)
@@ -796,7 +802,65 @@ class TestCli(unittest.TestCase):
     def test_billybox_tools_list(self):
         self.assertIn("ctxpack", bb.BILLYBOX_TOOLS)
         self.assertIn("fieldboard", bb.BILLYBOX_TOOLS)
-        self.assertEqual(len(bb.BILLYBOX_TOOLS), 5)
+        self.assertEqual(len(bb.BILLYBOX_TOOLS), 10)
+
+
+class TestToolRegistry(unittest.TestCase):
+    """The registry must cover everything preflight can invoke.
+
+    This is the doctor/preflight mismatch guard: bb doctor reported 5 tools
+    while DEFAULT_PREFLIGHT invoked 5 different commands, 4 of which doctor
+    could not see and bb install could not install.
+    """
+
+    def test_every_default_preflight_command_is_in_registry(self):
+        import shlex as _shlex
+
+        for step in bb.DEFAULT_PREFLIGHT:
+            exe = Path(_shlex.split(step)[0]).name
+            self.assertIn(
+                exe,
+                bb.TOOL_PACKAGES,
+                f"preflight invokes {exe!r} but it is not in TOOL_PACKAGES",
+            )
+
+    def test_billybox_tools_derives_from_registry(self):
+        self.assertEqual(set(bb.BILLYBOX_TOOLS), set(bb.TOOL_PACKAGES))
+
+    def test_registry_has_no_empty_package_names(self):
+        for tool, pkg in bb.TOOL_PACKAGES.items():
+            self.assertTrue(pkg, f"{tool} has an empty package name")
+
+    def test_known_pypi_collisions_use_distinct_names(self):
+        """Bare names taken by other projects must not be used."""
+        self.assertEqual(bb.TOOL_PACKAGES["ctxpack"], "ctxpack-cli")
+        self.assertEqual(bb.TOOL_PACKAGES["commitlog"], "commitlog-cli")
+        self.assertEqual(bb.TOOL_PACKAGES["bb"], "bb-toolbelt")
+        self.assertEqual(bb.TOOL_PACKAGES["graft"], "graft-inventory")
+
+    def test_depscan_key_matches_real_console_script(self):
+        """dep-health-scanner installs as 'depscan'; the key must be the script."""
+        self.assertIn("depscan", bb.TOOL_PACKAGES)
+        self.assertEqual(bb.TOOL_PACKAGES["depscan"], "dep-health-scanner")
+        self.assertNotIn("dep-health-scanner", bb.TOOL_PACKAGES)
+
+    def test_no_default_step_uses_an_unverified_subcommand(self):
+        """Guards the specific invalid invocations that shipped in v0.1.0."""
+        joined = " | ".join(bb.DEFAULT_PREFLIGHT)
+        for broken in (
+            "mdguard check",
+            "graft scan",
+            "policy-runner run",
+            "dep-health-scanner scan",
+        ):
+            self.assertNotIn(broken, joined, f"{broken!r} is not a valid invocation")
+
+    def test_every_default_step_command_validates(self):
+        import shlex as _shlex
+
+        for step in bb.DEFAULT_PREFLIGHT:
+            exe = _shlex.split(step)[0]
+            self.assertTrue(bb.validate_command(exe), f"{exe} fails validation")
 
 
 if __name__ == "__main__":

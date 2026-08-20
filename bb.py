@@ -28,20 +28,51 @@ DEFAULT_TIMEOUT = 120
 
 CONFIG_NAMES = ("bb.json", ".billybox.json")
 
-BILLYBOX_TOOLS = (
-    "ctxpack",
-    "mockroute",
-    "config-drift",
-    "commitlog",
-    "fieldboard",
-)
+# Single source of truth: every tool bb can invoke, mapped to its PyPI
+# distribution name. The command (key) is what lands on PATH; the value is what
+# you pip install. They differ where the bare name was already taken on PyPI.
+#
+# Verified against PyPI and each repo's pyproject.toml on 2026-08-20.
+TOOL_PACKAGES = {
+    # Core suite
+    "ctxpack": "ctxpack-cli",  # 'ctxpack' taken by an unrelated project
+    "mockroute": "mockroute",
+    "config-drift": "config-drift",
+    "commitlog": "commitlog-cli",  # 'commitlog' taken by an unrelated project
+    "fieldboard": "fieldboard",
+    "bb": "bb-toolbelt",  # 'bb' taken by a bitbucket CLI
+    # Quality tools invoked by preflight
+    "mdguard": "mdguard",
+    "graft": "graft-inventory",  # 'graft' AND 'graft-cli' both taken
+    "policy-runner": "policy-runner",
+    # NOTE: the console script is 'depscan', not 'dep-health-scanner'.
+    "depscan": "dep-health-scanner",
+}
 
+BILLYBOX_TOOLS = tuple(TOOL_PACKAGES)
+
+# Tools that are not published to PyPI yet. bb install reports these as
+# 'unavailable' rather than attempting an install that would 404 — or worse,
+# silently fetch a squatted package.
+UNPUBLISHED_TOOLS = frozenset(TOOL_PACKAGES)
+
+# Default quality gate.
+#
+# Every invocation below was verified against the tool's actual CLI, not its
+# README prose. Divergences that were corrected:
+#   - mdguard has no 'check' subcommand; it takes positional paths.
+#   - graft has no 'scan' subcommand and no --json; it takes a directory
+#     plus --check for read-only validation.
+#   - policy-runner has no 'run' subcommand; --task and --policy are required,
+#     so it cannot have a zero-config default and is omitted here.
+#   - dep-health-scanner installs as 'depscan' and has no --json (--exit-code).
+#   - config-drift requires --configs-root and --environments.
 DEFAULT_PREFLIGHT = [
-    "mdguard check",
-    "graft scan --json",
-    "policy-runner run",
-    "dep-health-scanner scan --json",
-    "config-drift diff --fail-on-drift",
+    "mdguard . --json",
+    "graft . --check",
+    "depscan scan --exit-code",
+    "config-drift diff --configs-root ./configs --environments dev,staging,prod"
+    " --fail-on-drift",
 ]
 
 # Command names may contain alphanumerics, dots, dashes, underscores and path
@@ -324,18 +355,19 @@ def format_doctor_terminal(rows: list[dict[str, Any]], no_color: bool) -> str:
     else:
         lines.append(f"\033[1mBB DOCTOR\033[0m — bb {__version__}")
     lines.append("")
-    lines.append(f" {'Tool':<24} {'Status':<10} Version")
+    lines.append(f" {'Tool':<24} {'Status':<10} Version / install hint")
     lines.append(" " + "─" * 62)
 
     for row in rows:
         if row["installed"]:
             status_str = "OK" if no_color else "\033[32mOK\033[0m"
             pad = 10 if no_color else 20
+            detail = row.get("version") or "—"
         else:
             status_str = "MISSING" if no_color else "\033[33mMISSING\033[0m"
             pad = 10 if no_color else 20
-        version = row.get("version") or "—"
-        lines.append(f" {row['name']:<24} {status_str:<{pad}} {version[:40]}")
+            detail = f"pip install {row.get('package', row['name'])}"
+        lines.append(f" {row['name']:<24} {status_str:<{pad}} {detail[:40]}")
 
     installed = sum(1 for r in rows if r["installed"])
     missing = len(rows) - installed
@@ -371,6 +403,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         rows.append(
             {
                 "name": tool,
+                "package": TOOL_PACKAGES[tool],
                 "installed": installed,
                 "path": shutil.which(tool),
                 "version": tool_version(tool) if installed else None,

@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- **`bb doctor` / `bb preflight` registry mismatch.** `doctor` reported 5 tools
+  while `DEFAULT_PREFLIGHT` invoked 5 *different* commands, 4 of which `doctor`
+  could not see and `bb install` could not have installed. Both now derive from
+  one `TOOL_PACKAGES` registry covering all 10 tools, and a test asserts every
+  preflight step resolves to a registry key.
+- **Invalid default preflight invocations.** Each was verified against the
+  tool's real CLI rather than its README prose:
+  - `mdguard check` → `mdguard . --json` (no `check` subcommand; takes paths)
+  - `graft scan --json` → `graft . --check` (no `scan` subcommand, no `--json`)
+  - `dep-health-scanner scan --json` → `depscan scan --exit-code` (the console
+    script is `depscan`; there is no `--json`)
+  - `config-drift diff --fail-on-drift` → now passes the required
+    `--configs-root` and `--environments`
+  - `policy-runner run` → removed; `--task` and `--policy` are required, so it
+    cannot have a zero-config default
+- PyPI distribution names verified against the live index: `graft` publishes as
+  `graft-inventory` (both `graft` and `graft-cli` are taken by other projects);
+  `mdguard`, `policy-runner` and `dep-health-scanner` keep their bare names.
+
+### Added
+- `bb doctor` shows `pip install <package>` for missing tools; the JSON output
+  gains a `package` field.
+
+### Changed
+- Test suite: 103 → 110 tests, coverage held at 99%.
+
 ## [0.1.0] - 2026-08-20
 
 ### Added

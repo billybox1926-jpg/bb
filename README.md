@@ -74,11 +74,10 @@ bb init      [--force]
 ```json
 {
   "preflight": [
-    "mdguard check",
-    "graft scan --json",
-    "policy-runner run",
-    "dep-health-scanner scan --json",
-    "config-drift diff --fail-on-drift"
+    "mdguard . --json",
+    "graft . --check",
+    "depscan scan --exit-code",
+    "config-drift diff --configs-root ./configs --environments dev,staging,prod --fail-on-drift"
   ],
   "timeout_seconds": 120,
   "mockroute": {
@@ -91,6 +90,36 @@ bb init      [--force]
   }
 }
 ```
+
+### Tool registry
+
+`bb doctor` and `bb preflight` share one registry, so the doctor table shows
+exactly what preflight can invoke. The command on your PATH and the PyPI
+distribution name differ where the bare name was already taken:
+
+| Command | `pip install` |
+|---------|---------------|
+| `ctxpack` | `ctxpack-cli` |
+| `mockroute` | `mockroute` |
+| `config-drift` | `config-drift` |
+| `commitlog` | `commitlog-cli` |
+| `fieldboard` | `fieldboard` |
+| `bb` | `bb-toolbelt` |
+| `mdguard` | `mdguard` |
+| `graft` | `graft-inventory` |
+| `policy-runner` | `policy-runner` |
+| `depscan` | `dep-health-scanner` |
+
+> [!NOTE]
+> `dep-health-scanner` installs a console script named **`depscan`**, so that
+> is the name preflight invokes and the name `bb doctor` reports.
+>
+> `policy-runner` requires `--task` and `--policy`, so it has no zero-config
+> default and is not in `DEFAULT_PREFLIGHT`. Add it to your own `bb.json`
+> with explicit paths.
+>
+> None of these are published to PyPI yet — `bb doctor` will report every tool
+> as MISSING on a clean machine.
 
 | Key | Meaning |
 |-----|---------|
