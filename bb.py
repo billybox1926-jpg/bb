@@ -71,8 +71,10 @@ UNPUBLISHED_TOOLS = frozenset(TOOL_PACKAGES)
 DEFAULT_PREFLIGHT = [
     "mdguard . --json",
     "graft . --check",
-    "config-drift diff --configs-root ./configs --environments dev,staging,prod"
-    " --fail-on-drift",
+    (
+        "config-drift diff --configs-root ./configs "
+        "--environments dev,staging,prod --fail-on-drift"
+    ),
 ]
 
 # Command names may contain alphanumerics, dots, dashes, underscores and path
@@ -552,6 +554,8 @@ def get_templates() -> dict[str, Any]:
     """Return the scaffold templates written by `bb init`."""
     return {
         "bb.json": get_default_config(),
+        # NOTE: these are examples for policy-runner, not enforced by `bb`.
+        # policy-runner reads this file to gate commands you run through it.
         "policy.json": {
             "deny": ["rm -rf /", "curl * | sh", "eval "],
             "warn": ["sudo ", "chmod 777"],
